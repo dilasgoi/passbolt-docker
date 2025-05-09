@@ -1,0 +1,22 @@
+# Ignore actual environment files
+/env/*.env
+
+# Allow example environment files
+!/env/examples/
+
+# Ignore GPG and JWT keys
+/config/passbolt/gpg/*
+/config/passbolt/jwt/*
+
+# Ignore database data
+/data/mariadb/*
+
+# Ignore logs and backups with sensitive info
+/logs/*
+/backups/*
+
+# Ignore temporary files
+/tmp/*
+
+# Allow .gitkeep files (to preserve empty directories)
+!.gitkeep

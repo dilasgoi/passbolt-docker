@@ -1,0 +1,59 @@
+services:
+  db:
+    image: mariadb:10.11
+    restart: unless-stopped
+    env_file:
+      - ./env/db.env
+    volumes:
+      - ./data/mariadb:/var/lib/mysql
+    container_name: passbolt-db
+    networks:
+      - passbolt-network
+    healthcheck:
+      test: ["CMD", "mysql", "-u", "passbolt", "-pSuperSecureUser123", "-h", "localhost", "passbolt", "-e", "SELECT 1;"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+  
+  passbolt:
+    image: passbolt/passbolt:latest-ce
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - ./env/passbolt.env
+      - ./env/email.env
+    volumes:
+      - ./config/passbolt/gpg:/etc/passbolt/gpg:ro
+      - ./config/passbolt/jwt:/etc/passbolt/jwt:ro
+      - ./config/images:/usr/share/php/passbolt/webroot/img/public
+    tmpfs:
+      - /var/lib/passbolt/tmp/cache:mode=1777,size=100m
+    container_name: passbolt-app
+    networks:
+      - passbolt-network
+  
+  nginx:
+    image: nginx:latest
+    restart: unless-stopped
+    depends_on:
+      - passbolt
+    volumes:
+      - ./config/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./config/nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./config/nginx/ssl/certs/passbolt.crt:/etc/ssl/certs/passbolt.crt:ro
+      - ./config/nginx/ssl/private/passbolt.key:/etc/ssl/private/passbolt.key:ro
+    environment:
+      - ./env/nginx.env
+    ports:
+      - "8080:80"   # HTTP on port 8080
+      - "443:443"   # HTTPS on standard port 443
+    container_name: passbolt-nginx
+    networks:
+      - passbolt-network
+
+networks:
+  passbolt-network:
+    driver: bridge
